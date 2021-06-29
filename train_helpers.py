@@ -75,7 +75,10 @@ def setup_mpi(H):
     # os.environ["NCCL_LL_THRESHOLD"] = "0"
     os.environ["MASTER_ADDR"] = MPI.COMM_WORLD.bcast(socket.gethostname(), root=0)
     torch.cuda.set_device(H.local_rank)
-    dist.init_process_group(backend='nccl', init_method=f"env://")
+    try:
+        dist.init_process_group(backend='nccl', init_method=f"env://")
+    except RuntimeError:
+        print('process already exist')
 
 
 def distributed_maybe_download(path, local_rank, mpi_size):
