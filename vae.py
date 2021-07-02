@@ -247,6 +247,9 @@ class VAE(HModule):
         px_z = self.decoder.forward_uncond(n_batch, t=t)
         return self.decoder.out_net.sample(px_z)
 
-    def forward_samples_set_latents(self, n_batch, latents, t=None):
+    def forward_samples_set_latents(self, n_batch, latents, t=None, x_target=None):
         px_z = self.decoder.forward_manual_latents(n_batch, latents, t=t)
+        if x_target is not None:
+            distortion_per_pixel = self.decoder.out_net.nll(px_z, x_target)
+            return self.decoder.out_net.sample(px_z), distortion_per_pixel
         return self.decoder.out_net.sample(px_z)
