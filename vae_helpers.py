@@ -10,6 +10,11 @@ def gaussian_analytical_kl(mu1, mu2, logsigma1, logsigma2):
 
 
 @torch.jit.script
+def gaussian_analytical_reverse_kl(mu1, mu2, logsigma1, logsigma2):
+    return gaussian_analytical_kl(mu2, mu1, logsigma2, logsigma1)
+
+
+@torch.jit.script
 def draw_gaussian_diag_samples(mu, logsigma):
     eps = torch.empty_like(mu).normal_(0., 1.)
     return torch.exp(logsigma) * eps + mu
