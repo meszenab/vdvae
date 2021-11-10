@@ -11,7 +11,7 @@ import torch
 import pickle
 import seaborn as sns
 
-def RD_points_step(vae, x, preprocess_fn, return_samples=False):
+def RD_points_step(vae, x, preprocess_fn, t=None, return_samples=False):
     data_input, target = preprocess_fn(x)
     batch_size = data_input.shape[0]
     ndims = np.prod(data_input.shape[1:])
@@ -28,14 +28,14 @@ def RD_points_step(vae, x, preprocess_fn, return_samples=False):
     samples = [None] * len(kls)
     for i in range(len(zs)): #brute force, no caching
         with torch.no_grad():
-            samples[i], distortion_up_to_layer[i] = vae.forward_samples_set_latents(batch_size, zs[:i], x_target=target)
+            samples[i], distortion_up_to_layer[i] = vae.forward_samples_set_latents(batch_size, zs[:i], t=t, x_target=target)
     if not return_samples:
         return num_latent_per_layer, rate_per_layer, [distortion.cpu().detach().numpy() for distortion in distortion_up_to_layer]
     else:
         return samples, num_latent_per_layer, rate_per_layer, [distortion.cpu().detach().numpy() for distortion in distortion_up_to_layer]
 
     
-def RD_points(vae, data, preprocess_fn, batch_size=16, transform_fn=None, file_name_to_save=None, **kwargs):
+def RD_points(vae, data, preprocess_fn, batch_size=16, transform_fn=None, file_name_to_save=None, t=None, **kwargs):
     step = 0
     rate_per_layer, distortion_up_to_layer = None, None
     for x in DataLoader(data, batch_size=batch_size, drop_last=True, pin_memory=True):#, sampler=valid_sampler):
@@ -45,7 +45,7 @@ def RD_points(vae, data, preprocess_fn, batch_size=16, transform_fn=None, file_n
             torch.random.manual_seed(42)
             x = transform_fn(x, **kwargs)
 #            import pdb; pdb.set_trace()
-        num_latent_per_layer, rate_per_layer_batch, distortion_up_to_layer_batch = RD_points_step(vae, x, preprocess_fn)
+        num_latent_per_layer, rate_per_layer_batch, distortion_up_to_layer_batch = RD_points_step(vae, x, preprocess_fn, t=t)
         if rate_per_layer is None:
             rate_per_layer = rate_per_layer_batch
         else:
