@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+from torch.nn import PairwiseDistance
 from vae_helpers import HModule, get_1x1, get_3x3, DmolNet, draw_gaussian_diag_samples, gaussian_analytical_kl
 from collections import defaultdict
 import numpy as np
@@ -247,9 +248,17 @@ class VAE(HModule):
         px_z = self.decoder.forward_uncond(n_batch, t=t)
         return self.decoder.out_net.sample(px_z)
 
-    def forward_samples_set_latents(self, n_batch, latents, t=None, x_target=None):
+    def forward_samples_set_latents(self, n_batch, latents, t=None, x_target=None, x_orig=None):
         px_z = self.decoder.forward_manual_latents(n_batch, latents, t=t)
+        samples = self.decoder.out_net.sample(px_z)
         if x_target is not None:
             distortion_per_pixel = self.decoder.out_net.nll(px_z, x_target)
-            return self.decoder.out_net.sample(px_z), distortion_per_pixel
-        return self.decoder.out_net.sample(px_z)
+            if x_orig is not None:
+                pdist = PairwiseDistance(p=2)
+                flat_x_orig = torch.flatten(x_orig, start_dim=1).int()
+                #import pdb; pdb.set_trace()
+                flat_samples = torch.flatten(torch.from_numpy(samples), start_dim=1).int()
+                L2_per_channel = pdist(flat_x_orig, flat_samples) / flat_x_orig.shape[1]
+                return samples, distortion_per_pixel, L2_per_channel
+            return samples, distortion_per_pixel
+        return samples
